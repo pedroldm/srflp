@@ -4,7 +4,7 @@
 #include <iostream>
 #include <stdexcept>
 
-SRFLPPT::SRFLPPT(std::string filename, int movementType, double maxTempProportion) {
+SRFLPPT::SRFLPPT(std::string filename, int movementType, double maxTempProportion) : mersenne_engine(rng_device()) {
     std::ifstream input(filename);
     if (!input.is_open()) {
         throw std::runtime_error("Error opening file: " + filename);
@@ -13,10 +13,12 @@ SRFLPPT::SRFLPPT(std::string filename, int movementType, double maxTempProportio
     input >> this->n;
 
     this->lengths.resize(n);
+    this->halfLengths.resize(n);
     this->frequencyMatrix.resize(n, std::vector<int>(n, 0));
 
     for(int i = 0 ; i < n ; ++i) {
         input >> this->lengths[i];
+        this->halfLengths[i] = this->lengths[i] / 2.0;
     }
 
     for (int i = 0; i < n; ++i) {
@@ -32,22 +34,17 @@ SRFLPPT::SRFLPPT(std::string filename, int movementType, double maxTempProportio
 }
 
 SRFLPS SRFLPPT::construction() {
-    SRFLPS ss;
-    ss.sol.resize(this->n);
+    SRFLPS ss(this->n);
     std::iota(ss.sol.begin(), ss.sol.end(), 0);
-    std::random_device rnd_device;
-    std::mt19937 mersenne_engine{rnd_device()};
-    std::shuffle(ss.sol.begin(), ss.sol.end(), mersenne_engine);
+    std::shuffle(ss.sol.begin(), ss.sol.end(), this->mersenne_engine);
     return ss;
 }
 
 SRFLPS SRFLPPT::neighbor(SRFLPS sol) {
     SRFLPS newS = sol;
-    std::random_device rd;
-    std::mt19937 gen(rd());
     std::uniform_int_distribution<> dist(0, this->n - 1);
-    int index = dist(gen);
-    int newIndex = dist(gen);
+    int index = dist(this->mersenne_engine);
+    int newIndex = dist(this->mersenne_engine);
 
     switch(this->movementType) {
         case 1 : /* swap */
@@ -70,13 +67,34 @@ SRFLPS SRFLPPT::neighbor(SRFLPS sol) {
 }
 
 double SRFLPPT::evaluate(SRFLPS s) {
-    double totalCost = 0;
+    if (!s.cost) 
+        this->newCompleteEvaluation(s);
+    else
+        this->deltaEvaluation(s);
+    return s.cost;
+}
+
+void SRFLPPT::newCompleteEvaluation(SRFLPS s) {
+    double dist;
+    for(int i = 1 ; i < this->n ; i++) {
+        dist = this->halfLengths[i] + this->halfLengths[i - 1];
+        s.ftfC[i][i-1] = dist * this->frequencyMatrix[i][i-1];
+        s.ftfC[i-1][i] = dist * this->frequencyMatrix[i - 1][i];
+    }
+}
+
+void SRFLPPT::deltaEvaluation(SRFLPS s) {
+    
+}
+
+void SRFLPPT::oldCompleteEvaluation(SRFLPS s) {
+    s.cost = 0;
     for (int i = 0; i < this->n; i++) {
         for (int j = i + 1; j < this->n; j++) {
             int facility_i = s.sol[i];
             int facility_j = s.sol[j];
 
-            double distance = this->lengths[facility_i] / 2.0 + this->lengths[facility_j] / 2.0;
+            double distance = this->halfLengths[facility_i] + this->halfLengths[facility_j];
 
             for (int k = i + 1; k < j; ++k) {
                 int facility_k = s.sol[k];
@@ -84,8 +102,7 @@ double SRFLPPT::evaluate(SRFLPS s) {
             }
 
             double cost = this->frequencyMatrix[facility_i][facility_j];
-            totalCost += cost * distance;
+            s.cost += cost * distance;
         }
     }
-    return totalCost;
 }
