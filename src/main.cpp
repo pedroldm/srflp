@@ -14,7 +14,7 @@ int main(int argc, char* argv[]) {
     int tempD = 4;
     int upType = 1;
     int tempUpdate = 3;
-    int movementType = 1;
+    int movementType = 3;
     string filePath;
 
     for (int i = 1; i < argc; ++i) {
@@ -45,18 +45,22 @@ int main(int argc, char* argv[]) {
     }
 
     SRFLPPT* prob = new SRFLPPT(filePath, movementType, maxTempProportion);
-    PT<SRFLPS> algo(
-        tempMin,
-        prob->maxTemp,
-        tempL,
-        MKL,
-        PTL,
-        tempD,
-        upType,
-        std::max(PTL / tempUpdate, 1)
-    );
-    SRFLPS sol = algo.start(15, prob);
-    std::cout << std::fixed << std::setprecision(2) << sol.evalSol << std::endl;    
-    delete prob;
+    SRFLPS s = prob->construction();
+    prob->evaluate(s);
+    SRFLPS n = prob->neighbor(s);
+    prob->evaluate(n);
+    // PT<SRFLPS> algo(
+    //     tempMin,
+    //     prob->maxTemp,
+    //     tempL,
+    //     MKL,
+    //     PTL,
+    //     tempD,
+    //     upType,
+    //     std::max(PTL / tempUpdate, 1)
+    // );
+    // SRFLPS sol = algo.start(15, prob);
+    // std::cout << std::fixed << std::setprecision(2) << sol.evalSol << std::endl;    
+    // delete prob;
     return 0;
 }

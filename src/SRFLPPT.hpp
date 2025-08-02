@@ -19,7 +19,7 @@ class SRFLPPT : public Problem<SRFLPS> {
    public:
     int n;
     std::vector<int> lengths;
-    std::vector<int> halfLengths;
+    std::vector<double> halfLengths;
     std::vector<std::vector<int>> frequencyMatrix;
 
     int movementType = 1;
@@ -31,10 +31,9 @@ class SRFLPPT : public Problem<SRFLPS> {
     SRFLPPT(std::string filename, int movementType, double maxTempProportion);
     SRFLPS construction();
     SRFLPS neighbor(SRFLPS sol);
-    double evaluate(SRFLPS sol);
-    void oldCompleteEvaluation(SRFLPS s);
-    void newCompleteEvaluation(SRFLPS s);
-    void deltaEvaluation(SRFLPS s);
+    double evaluate(SRFLPS &sol);
+    void completeEvaluation(SRFLPS &s);
+    void deltaEvaluation(SRFLPS &s);
 };
 
 #endif
