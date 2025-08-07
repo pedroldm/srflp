@@ -5,8 +5,9 @@
 
 struct SRFLPS : public solution {
     std::vector<int> sol;
-    std::vector<std::vector<double>> ftfC;
-    std::vector<std::vector<double>> ftfD;
+    std::vector<double> E;
+    // std::vector<std::vector<double>> ftfC;
+    // std::vector<std::vector<double>> ftfD;
     std::pair<int, int> kl;
     double cost;
 };

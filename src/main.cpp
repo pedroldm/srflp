@@ -46,21 +46,29 @@ int main(int argc, char* argv[]) {
 
     SRFLPPT* prob = new SRFLPPT(filePath, movementType, maxTempProportion);
     SRFLPS s = prob->construction();
-    prob->evaluate(s);
-    SRFLPS n = prob->neighbor(s);
-    prob->evaluate(n);
-    // PT<SRFLPS> algo(
-    //     tempMin,
-    //     prob->maxTemp,
-    //     tempL,
-    //     MKL,
-    //     PTL,
-    //     tempD,
-    //     upType,
-    //     std::max(PTL / tempUpdate, 1)
-    // );
-    // SRFLPS sol = algo.start(15, prob);
-    // std::cout << std::fixed << std::setprecision(2) << sol.evalSol << std::endl;    
-    // delete prob;
+    PT<SRFLPS> algo(
+        tempMin,
+        prob->maxTemp,
+        tempL,
+        MKL,
+        PTL,
+        tempD,
+        upType,
+        std::max(PTL / tempUpdate, 1)
+    );
+    SRFLPS sol = algo.start(15, prob);
+    std::cout << std::fixed << std::setprecision(2) << sol.evalSol << std::endl; 
+    std::cout << std::fixed << std::setprecision(2) << prob->completeEval(s) << std::endl;
+    for(int i = 0 ; i < prob->n ; i++) {
+        std::cout << sol.sol[i] << " ";
+    }
+    std::cout << std::endl;
+    bool valid = true;
+    for(int i = 0 ; i < prob->n ; i++) {
+        if (std::find(sol.sol.begin(), sol.sol.end(), i) == sol.sol.end())
+            valid = false;
+    }
+    std::cout << valid;
+    delete prob;
     return 0;
 }

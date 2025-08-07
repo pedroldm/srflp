@@ -32,8 +32,12 @@ class SRFLPPT : public Problem<SRFLPS> {
     SRFLPS construction();
     SRFLPS neighbor(SRFLPS sol);
     double evaluate(SRFLPS &sol);
-    void completeEvaluation(SRFLPS &s);
-    void deltaEvaluation(SRFLPS &s);
+    void init_E(std::vector<double>& E,int N,std::vector<int>& pk);
+    void update_E(std::vector<double>& E,int k,int l,std::vector<int>& pk);
+    double Fast_Inc_Eval(std::vector<double>& E,std::vector<int>& pk,int k,int l);
+    double get_C(int k,std::vector<double>& E);
+    void Insert_new(std::vector<int>& a,int k,int l);
+    double completeEval(SRFLPS s);
 };
 
 #endif
