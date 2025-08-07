@@ -80,6 +80,7 @@ double SRFLPPT::evaluate(SRFLPS &s) {
 
 void SRFLPPT::completeEvaluation(SRFLPS &s) {
     double dist;
+    s.cost = 0.0;
 
     for (int i = 1; i < this->n; i++) {
         dist = this->halfLengths[s.sol[i]] + this->halfLengths[s.sol[i - 1]];
@@ -89,6 +90,8 @@ void SRFLPPT::completeEvaluation(SRFLPS &s) {
             dist * this->frequencyMatrix[s.sol[i - 1]][s.sol[i]];
         s.ftfD[s.sol[i - 1]][s.sol[i]] = dist;
         s.ftfD[s.sol[i]][s.sol[i - 1]] = dist;
+        s.cost += s.ftfC[s.sol[i]][s.sol[i - 1]];
+        s.cost += s.ftfC[s.sol[i - 1]][s.sol[i]];
     }
 
     for (int leap = 2; leap < this->n; leap++) {
@@ -102,15 +105,79 @@ void SRFLPPT::completeEvaluation(SRFLPS &s) {
                 dist * this->frequencyMatrix[s.sol[i - leap]][s.sol[i]];
             s.ftfD[s.sol[i - leap]][s.sol[i]] = dist;
             s.ftfD[s.sol[i]][s.sol[i - leap]] = dist;
-        }
-    }
-
-    s.cost = 0.0;
-    for (const auto &row : s.ftfC) {
-        for (double val : row) {
-            s.cost += val;
+            s.cost += s.ftfC[s.sol[i]][s.sol[i - leap]];
+            s.cost += s.ftfC[s.sol[i - leap]][s.sol[i]];
         }
     }
 }
 
-void SRFLPPT::deltaEvaluation(SRFLPS &s) {}
+void SRFLPPT::deltaEvaluation(SRFLPS &s) {
+    double dist = 0.0, costDiff = 0.0;
+    if (s.kl.first > s.kl.second) {
+        for (int i = s.kl.second; i < s.kl.first; i++) {
+            dist += this->lengths[s.sol[i]];
+        }
+
+        for (int i = 0; i < s.kl.second; i++) {
+            s.ftfD[s.sol[i]][s.kl.first] += dist;
+            s.ftfD[s.kl.first][s.sol[i]] += dist;
+            s.ftfC[s.sol[i]][s.kl.first] += this->frequencyMatrix[s.sol[i]][s.kl.first] * dist;
+            s.ftfC[s.kl.first][s.sol[i]] += this->frequencyMatrix[s.kl.first][s.sol[i]] * dist;
+            costDiff += this->frequencyMatrix[s.sol[i]][s.kl.first] * dist;
+            costDiff += this->frequencyMatrix[s.kl.first][s.sol[i]] * dist;
+        }
+
+        for (int i = s.kl.first + 1; i < this->n; i++) {
+            s.ftfD[s.sol[i]][s.kl.first] -= dist;
+            s.ftfD[s.kl.first][s.sol[i]] -= dist;
+            s.ftfC[s.sol[i]][s.kl.first] -= this->frequencyMatrix[s.sol[i]][s.kl.first] * dist;
+            s.ftfC[s.kl.first][s.sol[i]] -= this->frequencyMatrix[s.kl.first][s.sol[i]] * dist;
+            costDiff -= this->frequencyMatrix[s.sol[i]][s.kl.first] * dist;
+            costDiff -= this->frequencyMatrix[s.kl.first][s.sol[i]] * dist;
+        }
+
+        double newDist = dist, prevHalf = 0.0;
+        for (int i = s.kl.first - 1; i >= s.kl.second; i--) {
+            newDist -= (this->halfLengths[s.sol[i]] + prevHalf);
+            s.ftfD[s.sol[i]][s.kl.first] = newDist;
+            s.ftfD[s.kl.first][s.sol[i]] = newDist;
+            costDiff += (this->frequencyMatrix[s.sol[i]][s.kl.first] * newDist) - s.ftfC[s.sol[i]][s.kl.first];
+            costDiff += (this->frequencyMatrix[s.kl.first][s.sol[i]] * newDist) - s.ftfC[s.kl.first][s.sol[i]];
+            s.ftfC[s.sol[i]][s.kl.first] = this->frequencyMatrix[s.sol[i]][s.kl.first] * newDist;
+            s.ftfC[s.kl.first][s.sol[i]] = this->frequencyMatrix[s.kl.first][s.sol[i]] * newDist;
+            prevHalf = this->halfLengths[s.sol[i]];
+        }
+    } else if (s.kl.first < s.kl.second) {
+        for(int i = s.kl.first ; i < s.kl.second ; i++) {
+            dist += this->lengths[s.sol[i]];
+        }
+        for(int i = 0 ; i < s.kl.first ; i++) {
+            s.ftfD[s.sol[i]][s.kl.first] += dist;
+            s.ftfD[s.kl.first][s.sol[i]] += dist;
+            s.ftfC[s.sol[i]][s.kl.first] += this->frequencyMatrix[s.sol[i]][s.kl.first] * dist;
+            s.ftfD[s.kl.first][s.sol[i]] += this->frequencyMatrix[s.kl.first][s.sol[i]] * dist;
+            costDiff += this->frequencyMatrix[s.sol[i]][s.kl.first] * dist;
+            costDiff += this->frequencyMatrix[s.kl.first][s.sol[i]] * dist;
+        }
+        for(int i = s.kl.second + 1 ; i < this->n ; i++) {
+            s.ftfD[s.sol[i]][s.kl.first] -= dist;
+            s.ftfD[s.kl.first][s.sol[i]] -= dist;
+            s.ftfC[s.sol[i]][s.kl.first] -= this->frequencyMatrix[s.sol[i]][s.kl.first] * dist;
+            s.ftfD[s.kl.first][s.sol[i]] -= this->frequencyMatrix[s.kl.first][s.sol[i]] * dist;
+            costDiff -= this->frequencyMatrix[s.sol[i]][s.kl.first] * dist;
+            costDiff -= this->frequencyMatrix[s.kl.first][s.sol[i]] * dist;
+        }
+        double newDist = dist, prevHalf = 0.0;
+        for(int i = s.kl.first ; i < s.kl.second ; i++) {
+            newDist -= (this->halfLengths[s.sol[i]] + prevHalf);
+            s.ftfD[s.sol[i]][s.kl.first] = newDist;
+            s.ftfD[s.kl.first][s.sol[i]] = newDist;
+            costDiff += (this->frequencyMatrix[s.sol[i]][s.kl.first] * newDist) - s.ftfC[s.sol[i]][s.kl.first];
+            costDiff += (this->frequencyMatrix[s.sol[i]][s.kl.first] * newDist) - s.ftfC[s.kl.first][s.sol[i]];
+            s.ftfC[s.sol[i]][s.kl.first] = this->frequencyMatrix[s.sol[i]][s.kl.first] * newDist;
+            s.ftfC[s.kl.first][s.sol[i]] = this->frequencyMatrix[s.kl.first][s.sol[i]] * newDist;
+            prevHalf = this->halfLengths[s.sol[i]];
+        }
+    }
+    s.cost += costDiff;
+}
